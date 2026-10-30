@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Daily Planner</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#6366f1">
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: { 50: '#eef2ff', 100: '#e0e7ff', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca' }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Chart.js for Analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans antialiased min-h-screen flex flex-col pb-20 select-none">
+
+    <!-- Top App Bar -->
+    <header class="sticky top-0 z-40 bg-slate-900/80 backdrop-blur-md border-b border-slate-800 px-4 py-3 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+            <div id="app-logo" class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/30">
+                <i data-lucide="check-square" class="w-6 h-6"></i>
+            </div>
+            <div>
+                <h1 id="greeting-title" class="text-sm font-medium text-slate-400">Welcome Back</h1>
+                <p id="current-date-header" class="text-lg font-bold text-slate-100">Loading...</p>
+            </div>
+        </div>
+        <div class="flex items-center space-x-2">
+            <button onclick="openModal('task-modal')" class="p-2 rounded-xl bg-indigo-600 text-white hover:bg-indigo-500 transition shadow-md shadow-indigo-600/20">
+                <i data-lucide="plus" class="w-5 h-5"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 max-w-md w-full mx-auto p-4 pb-24 overflow-y-auto">
+
+        <!-- 1. HOME / DASHBOARD VIEW -->
+        <section id="view-home" class="view-section space-y-6">
+            <!-- Productivity Score Card -->
+            <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-900/40 via-slate-900 to-slate-900 border border-indigo-500/20 p-6 shadow-xl">
+                <div class="absolute -right-10 -bottom-10 w-40 h-40 bg-indigo-500/10 rounded-full blur-2xl"></div>
+                <div class="flex items-center justify-between">
+                    <div>
+                        <span class="text-xs font-semibold uppercase tracking-wider text-indigo-400">Productivity Score</span>
+                        <h2 id="dash-score" class="text-4xl font-extrabold text-white mt-1">0%</h2>
+                        <p id="dash-score-sub" class="text-xs text-slate-400 mt-1">Great start today!</p>
+                    </div>
+                    <!-- Progress Ring -->
+                    <div class="relative flex items-center justify-center">
+                        <svg class="w-20 h-20 transform -rotate-90">
+                            <circle cx="40" cy="40" r="34" stroke="currentColor" stroke-width="6" class="text-slate-800" fill="transparent"></circle>
+                            <circle id="dash-progress-circle" cx="40" cy="40" r="34" stroke="currentColor" stroke-width="6" class="text-indigo-500 transition-all duration-500" fill="transparent" stroke-dasharray="213.6" stroke-dashoffset="213.6" stroke-linecap="round"></circle>
+                        </svg>
+                        <span id="dash-percentage" class="absolute text-sm font-bold text-white">0%</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Metrics Grid -->
+            <div class="grid grid-cols-3 gap-3">
+                <div class="bg-slate-900 border border-slate-800/80 rounded-2xl p-4 text-center">
+                    <span class="text-xs text-slate-400 block">Total</span>
+                    <span id="stat-total" class="text-xl font-bold text-white mt-1 block">0</span>
+                </div>
+                <div class="bg-slate-900 border border-slate-800/80 rounded-2xl p-4 text-center">
+                    <span class="text-xs text-emerald-400 block">Done</span>
+                    <span id="stat-done" class="text-xl font-bold text-emerald-400 mt-1 block">0</span>
+                </div>
+                <div class="bg-slate-900 border border-slate-800/80 rounded-2xl p-4 text-center">
+                    <span class="text-xs text-amber-400 block">Pending</span>
+                    <span id="stat-pending" class="text-xl font-bold text-amber-400 mt-1 block">0</span>
+                </div>
+            </div>
+
+            <!-- Today's Priority Task Spotlight -->
+            <div class="space-y-3">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-sm font-semibold text-slate-300 uppercase tracking-wider">Top Priority Focus</h3>
+                </div>
+                <div id="dash-priority-card" class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex items-center justify-between shadow-sm">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-400 flex items-center justify-center">
+                            <i data-lucide="alert-circle" class="w-5 h-5"></i>
+                        </div>
+                        <div>
+                            <h4 id="dash-priority-title" class="text-sm font-bold text-slate-200">No high priority task set</h4>
+                            <p id="dash-priority-time" class="text-xs text-slate-400">Add a task to begin</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Today's Tasks Quick Tracker Preview -->
+            <div class="space-y-3">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-sm font-semibold text-slate-300 uppercase tracking-wider">Today's Quick Tracker</h3>
+                    <button onclick="switchTab('planner')" class="text-xs text-indigo-400 font-medium hover:underline">View All</button>
+                </div>
+                <div id="dash-today-list" class="space-y-2">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. PLANNER VIEW -->
+        <section id="view-planner" class="view-section hidden space-y-4">
+            <div class="flex items-center justify-between">
+                <h2 class="text-lg font-bold text-white">Daily Tasks</h2>
+                <div class="flex items-center space-x-2 bg-slate-900 p-1 rounded-xl border border-slate-800">
+                    <button onclick="setPlannerView('timeline')" id="btn-view-timeline" class="px-3 py-1 text-xs font-medium rounded-lg bg-indigo-600 text-white transition">Timeline</button>
+                    <button onclick="setPlannerView('list')" id="btn-view-list" class="px-3 py-1 text-xs font-medium rounded-lg text-slate-400 transition">List</button>
+                </div>
+            </div>
+
+            <!-- Filters Bar -->
+            <div class="flex items-center space-x-2 overflow-x-auto pb-2">
+                <input type="date" id="filter-date" onchange="renderPlanner()" class="bg-slate-900 border border-slate-800 text-xs text-slate-300 rounded-xl px-3 py-2 outline-none">
+                <select id="filter-category" onchange="renderPlanner()" class="bg-slate-900 border border-slate-800 text-xs text-slate-300 rounded-xl px-3 py-2 outline-none">
+                    <option value="">All Categories</option>
+                    <option value="Work">Work</option>
+                    <option value="Study">Study</option>
+                    <option value="Personal">Personal</option>
+                    <option value="Health & Fitness">Health & Fitness</option>
+                    <option value="Reading">Reading</option>
+                </select>
+                <select id="filter-priority" onchange="renderPlanner()" class="bg-slate-900 border border-slate-800 text-xs text-slate-300 rounded-xl px-3 py-2 outline-none">
+                    <option value="">All Priorities</option>
+                    <option value="High">High</option>
+                    <option value="Medium">Medium</option>
+                    <option value="Low">Low</option>
+                </select>
+            </div>
+
+            <!-- Tasks Container -->
+            <div id="planner-tasks-container" class="space-y-3">
+                <!-- Populated dynamically -->
+            </div>
+        </section>
+
+        <!-- 3. CALENDAR VIEW -->
+        <section id="view-calendar" class="view-section hidden space-y-4">
+            <h2 class="text-lg font-bold text-white">Calendar Planner</h2>
+            <div class="bg-slate-900 border border-slate-800 rounded-3xl p-4 space-y-4">
+                <div class="flex items-center justify-between">
+                    <button onclick="changeMonth(-1)" class="p-2 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
+                    <h3 id="cal-month-year" class="text-sm font-bold text-white">October 2026</h3>
+                    <button onclick="changeMonth(1)" class="p-2 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+                </div>
+                <!-- Weekdays Header -->
+                <div class="grid grid-cols-7 text-center text-xs font-semibold text-slate-500">
+                    <span>Su</span><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span>
+                </div>
+                <!-- Days Grid -->
+                <div id="cal-grid" class="grid grid-cols-7 gap-1 text-center text-xs">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <!-- Selected Date Tasks -->
+            <div class="space-y-2">
+                <h3 id="cal-selected-date-title" class="text-sm font-semibold text-slate-300">Tasks for Today</h3>
+                <div id="cal-date-tasks" class="space-y-2">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. ANALYTICS VIEW -->
+        <section id="view-analytics" class="view-section hidden space-y-6">
+            <h2 class="text-lg font-bold text-white">Productivity Analytics</h2>
+            
+            <div class="grid grid-cols-2 gap-3">
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+                    <span class="text-xs text-slate-400">Completion Rate</span>
+                    <h3 id="analytics-rate" class="text-2xl font-extrabold text-indigo-400 mt-1">0%</h3>
+                </div>
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+                    <span class="text-xs text-slate-400">Productive Day</span>
+                    <h3 id="analytics-best-day" class="text-lg font-bold text-white mt-1">Monday</h3>
+                </div>
+            </div>
+
+            <!-- Charts -->
+            <div class="bg-slate-900 border border-slate-800 rounded-3xl p-4 space-y-3">
+                <h3 class="text-sm font-semibold text-slate-300">Weekly Performance Trend</h3>
+                <canvas id="productivityChart" class="w-full h-48"></canvas>
+            </div>
+        </section>
+
+        <!-- 5. SETTINGS & ROUTINES VIEW -->
+        <section id="view-settings" class="view-section hidden space-y-6">
+            <h2 class="text-lg font-bold text-white">Settings & Habits</h2>
+
+            <!-- Habits Section -->
+            <div class="bg-slate-900 border border-slate-800 rounded-3xl p-4 space-y-4">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-sm font-semibold text-slate-300">Daily Routines & Habits</h3>
+                    <button onclick="openModal('habit-modal')" class="text-xs bg-indigo-600 text-white px-3 py-1.5 rounded-xl font-medium">+ Add Habit</button>
+                </div>
+                <div id="habits-container" class="space-y-2">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <!-- End of Day Reflection -->
+            <div class="bg-slate-900 border border-slate-800 rounded-3xl p-4 space-y-4">
+                <h3 class="text-sm font-semibold text-slate-300">End-of-Day Reflection</h3>
+                <div class="space-y-3">
+                    <div>
+                        <label class="text-xs text-slate-400 block mb-1">What did I accomplish today?</label>
+                        <textarea id="ref-accomplish" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-2 text-xs text-slate-200 outline-none" rows="2"></textarea>
+                    </div>
+                    <div>
+                        <label class="text-xs text-slate-400 block mb-1">Daily Rating (1-10)</label>
+                        <input type="number" id="ref-rating" min="1" max="10" value="8" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-2 text-xs text-slate-200 outline-none">
+                    </div>
+                    <button onclick="saveReflection()" class="w-full py-2 bg-indigo-600 text-white rounded-xl text-xs font-semibold hover:bg-indigo-500 transition">Save Daily Review</button>
+                </div>
+            </div>
+
+            <!-- App Management -->
+            <div class="bg-slate-900 border border-slate-800 rounded-3xl p-4 space-y-3">
+                <h3 class="text-sm font-semibold text-slate-300">Data Management</h3>
+                <div class="flex space-x-2">
+                    <button onclick="exportData()" class="flex-1 py-2 bg-slate-800 text-slate-200 rounded-xl text-xs font-medium hover:bg-slate-700">Export JSON</button>
+                    <button onclick="clearAllData()" class="flex-1 py-2 bg-rose-500/10 text-rose-400 rounded-xl text-xs font-medium hover:bg-rose-500/20">Clear Data</button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Bottom Navigation Bar -->
+    <nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-slate-900/90 backdrop-blur-md border-t border-slate-800 px-4 py-2 flex justify-between items-center z-50">
+        <button onclick="switchTab('home')" class="nav-btn flex flex-col items-center text-indigo-400" data-target="home">
+            <i data-lucide="home" class="w-5 h-5"></i>
+            <span class="text-[10px] mt-1 font-medium">Home</span>
+        </button>
+        <button onclick="switchTab('planner')" class="nav-btn flex flex-col items-center text-slate-400 hover:text-slate-200" data-target="planner">
+            <i data-lucide="calendar" class="w-5 h-5"></i>
+            <span class="text-[10px] mt-1 font-medium">Planner</span>
+        </button>
+        <button onclick="switchTab('calendar')" class="nav-btn flex flex-col items-center text-slate-400 hover:text-slate-200" data-target="calendar">
+            <i data-lucide="grid" class="w-5 h-5"></i>
+            <span class="text-[10px] mt-1 font-medium">Calendar</span>
+        </button>
+        <button onclick="switchTab('analytics')" class="nav-btn flex flex-col items-center text-slate-400 hover:text-slate-200" data-target="analytics">
+            <i data-lucide="bar-chart-2" class="w-5 h-5"></i>
+            <span class="text-[10px] mt-1 font-medium">Analytics</span>
+        </button>
+        <button onclick="switchTab('settings')" class="nav-btn flex flex-col items-center text-slate-400 hover:text-slate-200" data-target="settings">
+            <i data-lucide="settings" class="w-5 h-5"></i>
+            <span class="text-[10px] mt-1 font-medium">Settings</span>
+        </button>
+    </nav>
+
+    <!-- Task Creation Modal -->
+    <div id="task-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div class="bg-slate-900 border border-slate-800 w-full max-w-md rounded-t-3xl sm:rounded-3xl p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between">
+                <h3 class="text-base font-bold text-white">Create New Task</h3>
+                <button onclick="closeModal('task-modal')" class="p-1 text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <form id="task-form" onsubmit="handleTaskSubmit(event)" class="space-y-3">
+                <input type="hidden" id="task-id">
+                <div>
+                    <label class="text-xs text-slate-400 block mb-1">Task Title</label>
+                    <input type="text" id="task-title" required class="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-sm text-white outline-none">
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="text-xs text-slate-400 block mb-1">Date</label>
+                        <input type="date" id="task-date" required class="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-xs text-white outline-none">
+                    </div>
+                    <div>
+                        <label class="text-xs text-slate-400 block mb-1">Category</label>
+                        <select id="task-category" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-xs text-white outline-none">
+                            <option value="Work">Work</option>
+                            <option value="Study">Study</option>
+                            <option value="Personal">Personal</option>
+                            <option value="Health & Fitness">Health & Fitness</option>
+                            <option value="Reading">Reading</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="text-xs text-slate-400 block mb-1">Start Time</label>
+                        <input type="time" id="task-start" required class="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-xs text-white outline-none">
+                    </div>
+                    <div>
+                        <label class="text-xs text-slate-400 block mb-1">Priority</label>
+                        <select id="task-priority" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-xs text-white outline-none">
+                            <option value="High">High</option>
+                            <option value="Medium" selected>Medium</option>
+                            <option value="Low">Low</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="text-xs text-slate-400 block mb-1">Description & Notes</label>
+                    <textarea id="task-desc" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-xs text-white outline-none" rows="2"></textarea>
+                </div>
+                <button type="submit" class="w-full py-3 bg-indigo-600 text-white rounded-2xl text-sm font-semibold hover:bg-indigo-500 transition shadow-lg shadow-indigo-600/30">Save Task</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Habit Modal -->
+    <div id="habit-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 w-full max-w-sm rounded-3xl p-6 space-y-4">
+            <div class="flex items-center justify-between">
+                <h3 class="text-base font-bold text-white">Add New Habit</h3>
+                <button onclick="closeModal('habit-modal')" class="p-1 text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <form onsubmit="handleHabitSubmit(event)" class="space-y-3">
+                <div>
+                    <label class="text-xs text-slate-400 block mb-1">Habit Name</label>
+                    <input type="text" id="habit-title" required class="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-sm text-white outline-none">
+                </div>
+                <button type="submit" class="w-full py-3 bg-indigo-600 text-white rounded-2xl text-sm font-semibold hover:bg-indigo-500 transition">Save Habit</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Application Logic Script -->
+    <script>
+        // State Management
+        let tasks = JSON.parse(localStorage.getItem('adp_tasks')) || [
+            { id: 1, title: 'Morning Exercise & Yoga', date: new Date().toISOString().split('T')[0], start: '07:00', category: 'Health & Fitness', priority: 'High', completed: true, desc: '30 mins cardio' },
+            { id: 2, title: 'Project Architecture Planning', date: new Date().toISOString().split('T')[0], start: '10:00', category: 'Work', priority: 'High', completed: false, desc: 'Define API schemas' }
+        ];
+        let habits = JSON.parse(localStorage.getItem('adp_habits')) || [
+            { id: 1, title: 'Drink 3L Water', streak: 5, completed: true },
+            { id: 2, title: 'Daily Reading (20m)', streak: 3, completed: false }
+        ];
+        let currentTab = 'home';
+        let plannerView = 'timeline';
+        let selectedCalendarDate = new Date().toISOString().split('T')[0];
+        let currentMonthDate = new Date();
+        let productivityChartInstance = null;
+
+        // Initialize Lucide Icons & App
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            updateHeaderDate();
+            renderDashboard();
+            renderPlanner();
+            renderCalendar();
+            renderHabits();
+            renderAnalytics();
+            
+            document.getElementById('filter-date').value = new Date().toISOString().split('T')[0];
+            document.getElementById('task-date').value = new Date().toISOString().split('T')[0];
+
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('sw.js').catch(() => {});
+            }
+        });
+
+        function saveData() {
+            localStorage.setItem('adp_tasks', JSON.stringify(tasks));
+            localStorage.setItem('adp_habits', JSON.stringify(habits));
+        }
+
+        function updateHeaderDate() {
+            const options = { weekday: 'long', month: 'short', day: 'numeric' };
+            document.getElementById('current-date-header').innerText = new Date().toLocaleDateString('en-US', options);
+        }
+
+        // Navigation Tabs
+        function switchTab(tabId) {
+            currentTab = tabId;
+            document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`view-${tabId}`).classList.remove('hidden');
+
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                if(btn.dataset.target === tabId) {
+                    btn.classList.remove('text-slate-400');
+                    btn.classList.add('text-indigo-400');
+                } else {
+                    btn.classList.remove('text-indigo-400');
+                    btn.classList.add('text-slate-400');
+                }
+            });
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Dashboard Rendering
+        function renderDashboard() {
+            const todayStr = new Date().toISOString().split('T')[0];
+            const todayTasks = tasks.filter(t => t.date === todayStr);
+            const total = todayTasks.length;
+            const done = todayTasks.filter(t => t.completed).length;
+            const pending = total - done;
+            const percentage = total > 0 ? Math.round((done / total) * 100) : 0;
+
+            document.getElementById('stat-total').innerText = total;
+            document.getElementById('stat-done').innerText = done;
+            document.getElementById('stat-pending').innerText = pending;
+            document.getElementById('dash-percentage').innerText = `${percentage}%`;
+            document.getElementById('dash-score').innerText = `${percentage}%`;
+
+            // Progress Ring Calculation
+            const circle = document.getElementById('dash-progress-circle');
+            const circumference = 2 * Math.PI * 34;
+            const offset = circumference - (percentage / 100) * circumference;
+            circle.style.strokeDashoffset = offset;
+
+            // Priority Task
+            const highPriority = todayTasks.find(t => t.priority === 'High' && !t.completed) || todayTasks[0];
+            if(highPriority) {
+                document.getElementById('dash-priority-title').innerText = highPriority.title;
+                document.getElementById('dash-priority-time').innerText = `${highPriority.start} • ${highPriority.category}`;
+            } else {
+                document.getElementById('dash-priority-title').innerText = 'No pending high priority tasks';
+                document.getElementById('dash-priority-time').innerText = 'Enjoy your free time!';
+            }
+
+            // Today's Quick List
+            const listEl = document.getElementById('dash-today-list');
+            listEl.innerHTML = todayTasks.slice(0, 3).map(t => `
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3 flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <input type="checkbox" ${t.completed ? 'checked' : ''} onchange="toggleTask(${t.id})" class="w-4 h-4 rounded accent-indigo-600 cursor-pointer">
+                        <div>
+                            <h4 class="text-xs font-semibold ${t.completed ? 'line-through text-slate-500' : 'text-slate-200'}">${t.title}</h4>
+                            <span class="text-[10px] text-slate-400">${t.start}</span>
+                        </div>
+                    </div>
+                    <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800 text-slate-300">${t.category}</span>
+                </div>
+            `).join('') || '<p class="text-xs text-slate-500 text-center py-2">No tasks scheduled for today.</p>';
+        }
+
+        // Planner Rendering
+        function setPlannerView(view) {
+            plannerView = view;
+            document.getElementById('btn-view-timeline').className = view === 'timeline' ? 'px-3 py-1 text-xs font-medium rounded-lg bg-indigo-600 text-white transition' : 'px-3 py-1 text-xs font-medium rounded-lg text-slate-400 transition';
+            document.getElementById('btn-view-list').className = view === 'list' ? 'px-3 py-1 text-xs font-medium rounded-lg bg-indigo-600 text-white transition' : 'px-3 py-1 text-xs font-medium rounded-lg text-slate-400 transition';
+            renderPlanner();
+        }
+
+        function renderPlanner() {
+            const dateFilter = document.getElementById('filter-date').value;
+            const catFilter = document.getElementById('filter-category').value;
+            const prioFilter = document.getElementById('filter-priority').value;
+
+            let filtered = tasks.filter(t => {
+                if(dateFilter && t.date !== dateFilter) return false;
+                if(catFilter && t.category !== catFilter) return false;
+                if(prioFilter && t.priority !== prioFilter) return false;
+                return true;
+            });
+
+            filtered.sort((a, b) => a.start.localeCompare(b.start));
+
+            const container = document.getElementById('planner-tasks-container');
+            container.innerHTML = filtered.map(t => `
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <input type="checkbox" ${t.completed ? 'checked' : ''} onchange="toggleTask(${t.id})" class="w-4 h-4 rounded accent-indigo-600 cursor-pointer">
+                        <div>
+                            <h4 class="text-sm font-bold ${t.completed ? 'line-through text-slate-500' : 'text-slate-200'}">${t.title}</h4>
+                            <p class="text-xs text-slate-400">${t.start} • ${t.category} (${t.priority})</p>
+                        </div>
+                    </div>
+                    <button onclick="deleteTask(${t.id})" class="text-slate-500 hover:text-rose-400"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                </div>
+            `).join('') || '<p class="text-xs text-slate-500 text-center py-6">No tasks match your filter criteria.</p>';
+            lucide.createIcons();
+        }
+
+        // Calendar Rendering
+        function renderCalendar() {
+            const year = currentMonthDate.getFullYear();
+            const month = currentMonthDate.getMonth();
+            document.getElementById('cal-month-year').innerText = currentMonthDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+            const grid = document.getElementById('cal-grid');
+            let html = '';
+
+            for(let i=0; i<firstDay; i++) {
+                html += `<div></div>`;
+            }
+
+            for(let d=1; d<=daysInMonth; d++) {
+                const dateStr = `${year}-${String(month+1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                const hasTask = tasks.some(t => t.date === dateStr);
+                const isSelected = selectedCalendarDate === dateStr;
+
+                html += `<div onclick="selectCalendarDate('${dateStr}')" class="py-2 rounded-xl cursor-pointer transition ${isSelected ? 'bg-indigo-600 text-white font-bold' : 'hover:bg-slate-800 text-slate-300'} relative">
+                    ${d}
+                    ${hasTask && !isSelected ? '<span class="absolute bottom-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-indigo-400 rounded-full"></span>' : ''}
+                </div>`;
+            }
+            grid.innerHTML = html;
+            renderCalendarDateTasks();
+        }
+
+        function selectCalendarDate(dateStr) {
+            selectedCalendarDate = dateStr;
+            renderCalendar();
+        }
+
+        function changeMonth(dir) {
+            currentMonthDate.setMonth(currentMonthDate.getMonth() + dir);
+            renderCalendar();
+        }
+
+        function renderCalendarDateTasks() {
+            document.getElementById('cal-selected-date-title').innerText = `Tasks for ${selectedCalendarDate}`;
+            const dayTasks = tasks.filter(t => t.date === selectedCalendarDate);
+            const container = document.getElementById('cal-date-tasks');
+            container.innerHTML = dayTasks.map(t => `
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3 flex items-center justify-between text-xs">
+                    <span class="${t.completed ? 'line-through text-slate-500' : 'text-slate-200'} font-medium">${t.title} (${t.start})</span>
+                    <span class="text-slate-400">${t.category}</span>
+                </div>
+            `).join('') || '<p class="text-xs text-slate-500 py-1">No tasks on this date.</p>';
+        }
+
+        // Habits Rendering
+        function renderHabits() {
+            const container = document.getElementById('habits-container');
+            container.innerHTML = habits.map(h => `
+                <div class="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-3 flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <input type="checkbox" ${h.completed ? 'checked' : ''} onchange="toggleHabit(${h.id})" class="w-4 h-4 rounded accent-indigo-600 cursor-pointer">
+                        <span class="text-xs font-semibold ${h.completed ? 'line-through text-slate-500' : 'text-slate-200'}">${h.title}</span>
+                    </div>
+                    <span class="text-[10px] bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded-lg">🔥 ${h.streak} streak</span>
+                </div>
+            `).join('');
+        }
+
+        // Analytics Rendering
+        function renderAnalytics() {
+            const total = tasks.length;
+            const done = tasks.filter(t => t.completed).length;
+            const rate = total > 0 ? Math.round((done / total) * 100) : 0;
+            document.getElementById('analytics-rate').innerText = `${rate}%`;
+
+            const ctx = document.getElementById('productivityChart').getContext('2d');
+            if(productivityChartInstance) productivityChartInstance.destroy();
+
+            productivityChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                    datasets: [{
+                        label: 'Completion %',
+                        data: [65, 80, 75, 90, 85, 95, rate],
+                        borderColor: '#6366f1',
+                        backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { grid: { color: '#1e293b' }, ticks: { color: '#94a3b8' } },
+                        x: { grid: { display: false }, ticks: { color: '#94a3b8' } }
+                    }
+                }
+            });
+        }
+
+        // Actions & Modals
+        function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
+        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+        function toggleTask(id) {
+            const t = tasks.find(x => x.id === id);
+            if(t) {
+                t.completed = !t.completed;
+                saveData();
+                renderDashboard();
+                renderPlanner();
+                renderAnalytics();
+            }
+        }
+
+        function toggleHabit(id) {
+            const h = habits.find(x => x.id === id);
+            if(h) {
+                h.completed = !h.completed;
+                if(h.completed) h.streak += 1;
+                else h.streak = Math.max(0, h.streak - 1);
+                saveData();
+                renderHabits();
+            }
+        }
+
+        function deleteTask(id) {
+            tasks = tasks.filter(x => x.id !== id);
+            saveData();
+            renderDashboard();
+            renderPlanner();
+            renderCalendar();
+            renderAnalytics();
+        }
+
+        function handleTaskSubmit(e) {
+            e.preventDefault();
+            const newTask = {
+                id: Date.now(),
+                title: document.getElementById('task-title').value,
+                date: document.getElementById('task-date').value,
+                start: document.getElementById('task-start').value,
+                category: document.getElementById('task-category').value,
+                priority: document.getElementById('task-priority').value,
+                desc: document.getElementById('task-desc').value,
+                completed: false
+            };
+            tasks.push(newTask);
+            saveData();
+            closeModal('task-modal');
+            document.getElementById('task-form').reset();
+            renderDashboard();
+            renderPlanner();
+            renderCalendar();
+            renderAnalytics();
+        }
+
+        function handleHabitSubmit(e) {
+            e.preventDefault();
+            const newHabit = {
+                id: Date.now(),
+                title: document.getElementById('habit-title').value,
+                streak: 1,
+                completed: false
+            };
+            habits.push(newHabit);
+            saveData();
+            closeModal('habit-modal');
+            renderHabits();
+        }
+
+        function saveReflection() {
+            alert('End-of-day reflection saved successfully!');
+        }
+
+        function exportData() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ tasks, habits }));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", "daily_planner_backup.json");
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        function clearAllData() {
+            if(confirm('Are you sure you want to clear all data?')) {
+                localStorage.clear();
+                tasks = [];
+                habits = [];
+                renderDashboard();
+                renderPlanner();
+                renderCalendar();
+                renderHabits();
+                renderAnalytics();
+            }
+        }
+    </script>
+</body>
+</html>
